@@ -1,0 +1,18 @@
+# 忽略数据集文件夹
+/data/
+
+# 忽略Python的缓存文件
+__pycache__/
+
+# 忽略Conda环境文件夹 (如果有的话)
+pytorch_311/
+
+# 忽略VS Code的配置文件
+.vscode/
+
+# 忽略我们手动下载的模型文件
+*.pth
+
+runs/
+# 忽略生成的漏洞数据文件
+all_vulnerabilities.pkl
