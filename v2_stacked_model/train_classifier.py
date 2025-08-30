@@ -26,7 +26,9 @@ print("两阶段分类器训练脚本已准备就绪。")
 # =============================================================================
 
 # --- 1. 自动寻找最新的指纹数据文件 ---
-list_of_run_dirs = glob.glob('runs/*/')
+# 从config文件中获取路径
+runs_dir = config['output_paths']['runs_directory']
+list_of_run_dirs = glob.glob(os.path.join(runs_dir, '*/'))
 if not list_of_run_dirs:
     print("\n错误：在 'runs' 文件夹下找不到任何运行记录。")
     exit()

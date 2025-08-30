@@ -59,7 +59,9 @@ print("\n模型已通过您的原始方法加载成功！")
 
 # --- 加载漏洞数据 ---
 try:
-    with open('all_vulnerabilities.pkl', 'rb') as f:
+# 从config文件中获取路径
+    vulnerabilities_file = config['data_paths']['vulnerabilities_pkl']
+    with open(vulnerabilities_file, 'rb') as f:
         all_vulnerabilities = pickle.load(f)
     print(f"成功加载 {len(all_vulnerabilities)} 个漏洞样本！")
 
@@ -78,7 +80,8 @@ except FileNotFoundError:
 # 第3部分 (新版): 成对计算 H_clean 和 H_vuln
 # =============================================================================
 # 1. 创建一个总的“档案馆”文件夹 'runs'
-base_output_dir = 'runs'
+# 从config文件中获取路径
+base_output_dir = config['output_paths']['runs_directory']
 os.makedirs(base_output_dir, exist_ok=True)
 
 # 2. 创建一个唯一的、带时间戳的专属“档案室”文件夹
@@ -181,7 +184,9 @@ print("指纹提取器已准备就绪。")
 
 # a. 找到 'runs' 文件夹下所有带时间戳的子文件夹
 # 我们需要从上一级目录 (../) 开始寻找
-list_of_run_dirs = glob.glob('runs/*/')
+# 从config文件中获取路径
+runs_dir = config['output_paths']['runs_directory']
+list_of_run_dirs = glob.glob(os.path.join(runs_dir, '*/'))
 if not list_of_run_dirs:
     print("\n错误：在 'runs' 文件夹下找不到任何运行记录。")
     print("请确保您已经成功运行了 'generate_heatmaps.py' 脚本。")

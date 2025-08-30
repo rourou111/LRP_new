@@ -243,7 +243,11 @@ if __name__ == '__main__':
 
     print(f"\nTotal vulnerabilities collected: {len(all_vulnerabilities)}")
     print("Vulnerability sample generation complete!")
-    output_filename = 'all_vulnerabilities.pkl'
+    output_filename = config['data_paths']['vulnerabilities_pkl']
+    # 自动创建尚不存在的文件夹 (例如 'artifacts/')
+    output_dir = os.path.dirname(output_filename)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     if os.path.exists(output_filename):
         # 如果存在，则删除它
         os.remove(output_filename)
