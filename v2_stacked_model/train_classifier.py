@@ -123,55 +123,56 @@ label_encoder2 = LabelEncoder()
 y_train_experts = label_encoder2.fit_transform(y_train_experts_raw)
 
 print(f"已筛选出 {len(X_train_experts)} 个'对抗 vs. 噪声'样本，交由专家组处理。")
-# --- 2.2 定义每个专家的特征领域 ---
-# 动态变化学专家关注的是两张热力图的宏观差异和变化
+# --- 2.2 定义每个专家的特征领域 (升级版) ---
+
+# 原有的动态特征专家，现在得到了新武器“动态小波能量比变化率”
 features_dynamic = [
     'wasserstein_dist', 'cosine_similarity', 'kl_divergence_pos', 
-    'kl_divergence_neg', 'std_dev_diff', 'kurtosis_diff'
+    'kl_divergence_neg', 'std_dev_diff', 'kurtosis_diff',
+    'dynamic_wavelet_ratio_change' # <--- 新增
 ]
 
-# 频域分析专家只关注频域特征
+# 频域分析专家只关注傅里叶变换的高频特征
 features_frequency = ['high_freq_ratio']
 
-# 纹理学专家关注热力图的纹理质感
-features_texture = ['contrast', 'homogeneity', 'energy', 'correlation']
+# 纹理学专家，现在得到了新武器“低频子带结构失真度”
+features_texture = [
+    'contrast', 'homogeneity', 'energy', 'correlation',
+    'll_distortion' # <--- 新增
+]
 
-from sklearn.model_selection import cross_val_predict
-from sklearn.linear_model import LogisticRegression
-# --- 2.3 训练专家并使用交叉验证生成元特征 ---
-print("\n正在邀请各位专家进行会诊 (交叉验证)...")
+# 全新专家：“高敏哨兵”，它的眼中只有Z-score这一个最敏感的指标
+features_sensitivity = ['ratio_zscore'] # <--- 新增
+# --- 2.3 训练专家并使用交叉验证生成元特征 (升级版) ---
+# ... (准备数据的代码 X_train_experts_scaled_df 不变) ...
 
-# 准备专家组的数据 (修复与标准化)
-X_train_experts_imputed = imputer1.transform(X_train_experts) # 注意：使用模型一的imputer
-X_train_experts_scaled = scaler1.transform(X_train_experts_imputed) # 注意：使用模型一的scaler
-# 为了方便按列名索引，我们转回DataFrame
-X_train_experts_scaled_df = pd.DataFrame(X_train_experts_scaled, columns=X_train_full.columns, index=X_train_experts.index)
-
-
-# 创建专家模型实例
+# 创建专家模型实例 (增加一位新专家)
 dynamic_expert = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
 frequency_expert = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
 texture_expert = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+sensitivity_expert = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1) # <--- 新增
 
-# 获取每个专家对于“对抗vs噪声”的预测概率
-# method='predict_proba'会返回每个类别(噪声, 对抗)的概率
+# 获取每个专家的预测概率 (增加一位新专家)
 dynamic_opinions = cross_val_predict(dynamic_expert, X_train_experts_scaled_df[features_dynamic], y_train_experts, cv=5, method='predict_proba')
 frequency_opinions = cross_val_predict(frequency_expert, X_train_experts_scaled_df[features_frequency], y_train_experts, cv=5, method='predict_proba')
 texture_opinions = cross_val_predict(texture_expert, X_train_experts_scaled_df[features_texture], y_train_experts, cv=5, method='predict_proba')
+sensitivity_opinions = cross_val_predict(sensitivity_expert, X_train_experts_scaled_df[features_sensitivity], y_train_experts, cv=5, method='predict_proba') # <--- 新增
 
-# 将所有专家的意见（概率）合并，形成新的特征集
-X_train_meta = np.hstack([dynamic_opinions, frequency_opinions, texture_opinions])
+# 将所有专家的意见合并，形成新的特征集 (现在有4位专家的意见)
+X_train_meta = np.hstack([dynamic_opinions, frequency_opinions, texture_opinions, sensitivity_opinions]) # <--- 修改
 print("专家会诊完成，已形成元特征集。")
-# --- 2.4 训练最终决策者 (Meta-Classifier) ---
-# 我们需要为每个专家模型进行真实的fit，以便后续在测试集上使用
+
+
+# --- 2.4 训练最终决策者 (Meta-Classifier) (升级版) ---
+# ... (为每个专家模型进行真实的fit，增加一位新专家) ...
 print("\n各位专家正在学习总结...")
 dynamic_expert.fit(X_train_experts_scaled_df[features_dynamic], y_train_experts)
 frequency_expert.fit(X_train_experts_scaled_df[features_frequency], y_train_experts)
 texture_expert.fit(X_train_experts_scaled_df[features_texture], y_train_experts)
+sensitivity_expert.fit(X_train_experts_scaled_df[features_sensitivity], y_train_experts) # <--- 新增
 print("专家学习完成。")
 
-print("\n正在训练最终决策者...")
-# 使用逻辑回归作为最终决策者，它能很好地学习如何权衡不同专家的意见
+# ... (训练最终决策者的代码不变，它会自动适应新的输入) ...
 meta_classifier = LogisticRegression(random_state=42)
 meta_classifier.fit(X_train_meta, y_train_experts)
 print("最终决策者训练完成！")
@@ -202,17 +203,18 @@ non_drift_test_mask = (pred1_test == 0)
 X_test_for_experts = X_test_scaled_df[non_drift_test_mask]
 print(f" -> '分诊台'诊断完毕: {len(X_test_for_experts)} 个样本被提交至'专家组'。")
 
-# --- 这是新的“专家组”预测流程 ---
+# --- 这是新的“专家组”预测流程 (升级版) ---
 if len(X_test_for_experts) > 0:
     print(" -> 步骤2: '专家组'开始对疑难样本进行会诊...")
     # d. 各位专家对需要会诊的样本，分别给出自己的意见（预测概率）
-    # 注意：这里我们使用 .predict_proba()，因为最终决策者需要概率作为输入
     dynamic_opinions_test = dynamic_expert.predict_proba(X_test_for_experts[features_dynamic])
     frequency_opinions_test = frequency_expert.predict_proba(X_test_for_experts[features_frequency])
     texture_opinions_test = texture_expert.predict_proba(X_test_for_experts[features_texture])
-    
+    sensitivity_opinions_test = sensitivity_expert.predict_proba(X_test_for_experts[features_sensitivity]) # <--- 新增
+
     # e. 将所有专家的意见合并，形成元特征
-    X_test_meta = np.hstack([dynamic_opinions_test, frequency_opinions_test, texture_opinions_test])
+    X_test_meta = np.hstack([dynamic_opinions_test, frequency_opinions_test, texture_opinions_test, sensitivity_opinions_test]) # <--- 修改
+
     
     # f. “最终决策者”根据所有专家的意见，做出最终裁决
     expert_predictions = meta_classifier.predict(X_test_meta)

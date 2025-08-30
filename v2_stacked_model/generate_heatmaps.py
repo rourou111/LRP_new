@@ -51,10 +51,12 @@ print("\n模型已通过您的原始方法加载成功！")
 
 # --- 加载漏洞数据 ---
 # 我们需要从上一级目录读取这个文件
-vulnerabilities_file_path = 'all_vulnerabilities.pkl'
+# 从config文件中获取路径
+vulnerabilities_file_path = config['data_paths']['vulnerabilities_pkl']
 print(f"\n正在从路径加载漏洞数据: {vulnerabilities_file_path}")
 
 try:
+    # 使用新的路径变量
     with open(vulnerabilities_file_path, 'rb') as f:
         all_vulnerabilities = pickle.load(f)
     print(f"成功加载 {len(all_vulnerabilities)} 个漏洞样本！")
@@ -74,7 +76,8 @@ except FileNotFoundError:
 # 第3部分 (新版): 成对计算 H_clean 和 H_vuln
 # =============================================================================
 # 1. 创建一个总的“档案馆”文件夹 'runs'
-base_output_dir = 'runs'
+# 从config文件中获取路径
+base_output_dir = config['output_paths']['runs_directory']
 os.makedirs(base_output_dir, exist_ok=True)
 
 # 2. 创建一个唯一的、带时间戳的专属“档案室”文件夹
