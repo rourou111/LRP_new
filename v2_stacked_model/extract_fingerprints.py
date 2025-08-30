@@ -468,6 +468,27 @@ def calculate_ll_distortion(h_clean_tensor, h_vuln_tensor):
 # =============================================================================
 # 步骤四：批量处理所有样本，提取指纹
 # =============================================================================
+# --- 特征三的前置步骤：为Z-score校准基准 ---
+print("\n为特征三(Z-score)校准噪声基准...")
+noise_ratios = []
+for data_pair in paired_heatmaps:
+    if data_pair['vulnerability_type'] == 'noise_gaussian':
+        h_clean = data_pair['h_clean']
+        h_vuln = data_pair['h_vuln']
+        # 复用上面函数中的逻辑来计算静态能量比
+        def get_ratio(h_tensor):
+            h_np = h_tensor.detach().numpy().mean(axis=0)
+            coeffs = pywt.dwt2(h_np, 'haar')
+            LL, (LH, HL, HH) = coeffs
+            energy_ll = np.sum(LL**2)
+            energy_high_freq = np.sum(LH**2) + np.sum(HL**2) + np.sum(HH**2)
+            return energy_high_freq / (energy_ll + 1e-10)
+        # 我们用 H_vuln 来计算静态比值
+        noise_ratios.append(get_ratio(h_vuln))
+
+mu_noise = np.mean(noise_ratios)
+sigma_noise = np.std(noise_ratios)
+print(f"噪声基准校准完成: 平均值={mu_noise:.4f}, 标准差={sigma_noise:.4f}")
 
 # 创建一个列表，用于存储每个漏洞样本的最终指纹数据
 fingerprints_list = []
@@ -516,6 +537,13 @@ for i, data_pair in enumerate(paired_heatmaps):
         # 我们使用 ** 操作符来优雅地将texture_feats字典中的所有键值对解包并添加进来
         **texture_feats,
 
+        # 漏洞类型标签
+        'vulnerability_type': vuln_type
+                # --- 新增的三个核心特征 ---
+        'dynamic_wavelet_ratio_change': dynamic_ratio_change,
+        'll_distortion': ll_distortion,
+        'ratio_zscore': ratio_zscore,
+        
         # 漏洞类型标签
         'vulnerability_type': vuln_type
     }
