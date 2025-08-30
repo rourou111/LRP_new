@@ -519,8 +519,17 @@ for i, data_pair in enumerate(paired_heatmaps):
     high_freq_ratio = calculate_high_freq_energy_ratio(h_vuln)
     # 3. 新增的纹理特征
     texture_feats = calculate_texture_features(h_vuln)
+    # 调用新特征计算函数
+    dynamic_ratio_change = calculate_dynamic_wavelet_ratio(h_clean, h_vuln)
+    ll_distortion = calculate_ll_distortion(h_clean, h_vuln)
     
+    # 计算特征三 (Z-score)
+    # 复用 get_ratio 逻辑来获取当前样本的静态比值
+    static_ratio_sample = get_ratio(h_vuln) 
+    ratio_zscore = np.abs(static_ratio_sample - mu_noise) / (sigma_noise + 1e-10)
+
     # --- 将所有结果存入一个字典 ---
+# --- 将所有结果存入一个字典 ---
     fingerprint_data = {
         # 原有的对比性特征
         'wasserstein_dist': wasserstein,
@@ -528,23 +537,22 @@ for i, data_pair in enumerate(paired_heatmaps):
         'kl_divergence_pos': kl_pos,
         'kl_divergence_neg': kl_neg,
 
-        # 原有的内在性特征
+        # 原有的内在动态特征
         'std_dev_diff': std_diff,
         'kurtosis_diff': kurt_diff,
+        
+        # 原有的内在静态特征
         'high_freq_ratio': high_freq_ratio,
-
-        # --- 新增的纹理特征 ---
-        # 我们使用 ** 操作符来优雅地将texture_feats字典中的所有键值对解包并添加进来
+        
+        # 原有的纹理特征 (通过解包字典添加)
         **texture_feats,
 
-        # 漏洞类型标签
-        'vulnerability_type': vuln_type
-                # --- 新增的三个核心特征 ---
+        # --- 新增的三个核心特征 ---
         'dynamic_wavelet_ratio_change': dynamic_ratio_change,
         'll_distortion': ll_distortion,
         'ratio_zscore': ratio_zscore,
         
-        # 漏洞类型标签
+        # 漏洞类型标签 (只保留一个)
         'vulnerability_type': vuln_type
     }
     
