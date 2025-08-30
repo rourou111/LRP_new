@@ -6,12 +6,13 @@ import os
 import glob
 
 # 从 scikit-learn 中导入我们需要的模块
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_predict
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.impute import SimpleImputer
 import yaml
+from sklearn.linear_model import LogisticRegression
 
 # --- 加载配置文件 ---
 # 因为我们的脚本在 v2_stacked_model 文件夹内，所以需要用 ../ 来访问上一层的config.yaml
@@ -145,6 +146,12 @@ features_texture = [
 features_sensitivity = ['ratio_zscore'] # <--- 新增
 # --- 2.3 训练专家并使用交叉验证生成元特征 (升级版) ---
 # ... (准备数据的代码 X_train_experts_scaled_df 不变) ...
+# 使用阶段一的预处理器处理专家数据
+X_train_experts_imputed = imputer1.transform(X_train_experts)
+X_train_experts_scaled = scaler1.transform(X_train_experts_imputed)
+X_train_experts_scaled_df = pd.DataFrame(X_train_experts_scaled, 
+                                        columns=X_train_experts.columns, 
+                                        index=X_train_experts.index)
 
 # 创建专家模型实例 (增加一位新专家)
 dynamic_expert = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
