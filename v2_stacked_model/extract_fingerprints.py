@@ -19,6 +19,12 @@ import pywt
 # 导入 Captum 库中的核心模块：LRP 和可视化工具
 from captum.attr import LRP
 from captum.attr import visualization as viz
+import yaml
+
+# --- 加载配置文件 ---
+# 因为我们的脚本在 v2_stacked_model 文件夹内，所以需要用 ../ 来访问上一层的config.yaml
+with open("../config.yaml", "r", encoding="utf-8") as f:
+    config = yaml.safe_load(f)
 
 print("所有库导入成功！")
 

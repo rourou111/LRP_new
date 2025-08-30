@@ -1,0 +1,16 @@
+# config.yaml
+# 这是项目的中央配置文件。
+# 所有路径都相对于本项目根目录（即此文件所在的位置）。
+
+# 中间数据文件的路径
+data_paths:
+  # 由 generate_vulnerabilities.py 生成
+  # 由 extract_fingerprints.py 读取
+  vulnerabilities_pkl: "artifacts/all_vulnerabilities.pkl"
+
+# 最终输出的路径
+output_paths:
+  # 所有实验运行的根目录 (包含热力图、指纹csv、混淆矩阵等)
+  # 由 extract_fingerprints.py 创建
+  # 由 train_classifier.py 读取
+  runs_directory: "v2_stacked_model/runs"

@@ -10,6 +10,12 @@ from art.attacks.evasion import ProjectedGradientDescent
 import os
 import copy
 import pickle
+import yaml
+
+# --- 加载配置文件 ---
+# 因为我们的脚本在 v2_stacked_model 文件夹内，所以需要用 ../ 来访问上一层的config.yaml
+with open("../config.yaml", "r", encoding="utf-8") as f:
+    config = yaml.safe_load(f)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 # =============================================================================

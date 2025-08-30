@@ -11,6 +11,12 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.impute import SimpleImputer
+import yaml
+
+# --- 加载配置文件 ---
+# 因为我们的脚本在 v2_stacked_model 文件夹内，所以需要用 ../ 来访问上一层的config.yaml
+with open("../config.yaml", "r", encoding="utf-8") as f:
+    config = yaml.safe_load(f)
 
 print("所有机器学习库都已成功导入！")
 print("两阶段分类器训练脚本已准备就绪。")
