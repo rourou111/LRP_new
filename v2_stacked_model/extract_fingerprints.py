@@ -15,7 +15,7 @@ import numpy as np
 import os
 from skimage.feature import graycomatrix, graycoprops
 from datetime import datetime
-
+import pywt
 # 导入 Captum 库中的核心模块：LRP 和可视化工具
 from captum.attr import LRP
 from captum.attr import visualization as viz
@@ -416,6 +416,54 @@ def calculate_texture_features(h_vuln_tensor):
     }
     
     return texture_features
+def calculate_dynamic_wavelet_ratio(h_clean_tensor, h_vuln_tensor):
+    """特征一：计算动态小波能量比变化率"""
+    
+    def get_ratio(h_tensor):
+        h_np = h_tensor.detach().numpy().mean(axis=0) # 转为灰度图
+        coeffs = pywt.dwt2(h_np, 'haar')
+        LL, (LH, HL, HH) = coeffs
+        
+        # 计算能量 (平方和)
+        energy_ll = np.sum(LL**2)
+        energy_high_freq = np.sum(LH**2) + np.sum(HL**2) + np.sum(HH**2)
+        
+        # 加上一个极小值防止除以零
+        return energy_high_freq / (energy_ll + 1e-10)
+
+    ratio_clean = get_ratio(h_clean_tensor)
+    ratio_vuln = get_ratio(h_vuln_tensor)
+    
+    change_ratio = (ratio_vuln - ratio_clean) / (ratio_clean + 1e-10)
+    return change_ratio
+
+def calculate_ll_distortion(h_clean_tensor, h_vuln_tensor):
+    """特征二：计算低频子带结构失真度"""
+    
+    def get_ll_texture_vec(h_tensor):
+        h_np = h_tensor.detach().numpy().mean(axis=0)
+        coeffs = pywt.dwt2(h_np, 'haar')
+        LL, _ = coeffs
+        
+        # 归一化到 0-255 的整数范围以计算GLCM
+        ll_min, ll_max = LL.min(), LL.max()
+        if ll_max - ll_min < 1e-10: return np.array([0.0, 1.0, 1.0, 1.0])
+        ll_normalized = (LL - ll_min) / (ll_max - ll_min) * 255.0
+        ll_int = ll_normalized.astype(np.uint8)
+        
+        glcm = graycomatrix(ll_int, distances=[1], angles=[0], levels=256, symmetric=True, normed=True)
+        contrast = graycoprops(glcm, 'contrast').mean()
+        homogeneity = graycoprops(glcm, 'homogeneity').mean()
+        energy = graycoprops(glcm, 'energy').mean()
+        correlation = graycoprops(glcm, 'correlation').mean()
+        return np.array([contrast, homogeneity, energy, correlation])
+
+    vec_c = get_ll_texture_vec(h_clean_tensor)
+    vec_v = get_ll_texture_vec(h_vuln_tensor)
+    
+    # 计算余弦距离: 1 - (a dot b) / (||a|| * ||b||)
+    dist = 1 - np.dot(vec_c, vec_v) / (np.linalg.norm(vec_c) * np.linalg.norm(vec_v) + 1e-10)
+    return dist
 
 # =============================================================================
 # 步骤四：批量处理所有样本，提取指纹
